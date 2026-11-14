@@ -1,0 +1,121 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#141414"><title>Hero & Skin — Selena Aspirant</title>
+<script type="importmap">{"imports":{"three":"/l/three.module.js"}}</script>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{background:#141414;color:#ddd;font:14px/1.4 system-ui,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+header{padding:8px 10px;border-bottom:1px solid #333;flex:none}
+.top{display:flex;align-items:center;gap:8px}.top h1{font-size:16px;margin:0;flex:1}
+.top a{color:#a88bfa;text-decoration:none;font-size:13px;border:1px solid #333;border-radius:8px;padding:5px 9px}
+.sets{display:flex;gap:6px;margin-top:8px;overflow-x:auto;padding-bottom:2px}
+.sets button{flex:none;background:#222;color:#aaa;border:1px solid #333;border-radius:10px;padding:7px 11px;font-size:13px;text-align:left}
+.sets button small{display:block;font-size:10.5px;color:#777}
+.sets button.on{background:#7c5cdb;color:#fff;border-color:#7c5cdb}.sets button.on small{color:#e0d6ff}
+#stage{flex:1;min-height:0;position:relative;background:radial-gradient(circle at 50% 35%,#2b2840,#141414 75%)}
+#stage canvas{display:block;width:100%;height:100%;touch-action:none}
+#msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#bbb;pointer-events:none;text-align:center;padding:20px}
+#info{position:absolute;left:8px;top:6px;font-size:11px;color:#888;pointer-events:none}
+#panel{flex:none;border-top:1px solid #333;padding:8px 10px;max-height:38vh;overflow:auto;background:#181818}
+.tools{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.tools button,.chip{background:#222;color:#bbb;border:1px solid #333;border-radius:9px;padding:7px 10px;font-size:13px}
+.tools button.on,.chip.on{background:#3a2f66;color:#fff;border-color:#7c5cdb}
+select{background:#222;color:#ddd;border:1px solid #333;border-radius:9px;padding:7px 8px;font-size:13px;max-width:60%}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip small{color:#888;margin-left:4px}
+.lbl{color:#a88bfa;font-weight:600;font-size:12px;margin:6px 0 5px}
+#tx{position:fixed;inset:0;background:rgba(0,0,0,.95);display:none;z-index:20;flex-direction:column}#tx.on{display:flex}
+#tx .bar{padding:10px 12px;display:flex;gap:10px;align-items:center}#tx .bar span{flex:1;font-size:12px;word-break:break-all}
+#tx button{background:#333;color:#fff;border:0;border-radius:8px;padding:8px 14px}
+#tx .body{flex:1;min-height:0;overflow:auto;padding:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px}
+.grid div{background:#1e1e1e;border:1px solid #2c2c2c;border-radius:8px;overflow:hidden}
+.grid img{width:100%;aspect-ratio:1;object-fit:contain;background:#2a2a2a;display:block}
+.grid small{display:block;padding:3px 5px;font-size:10px;color:#999;word-break:break-all}
+#big{max-width:100%;max-height:100%;margin:auto;display:block;background:repeating-conic-gradient(#2a2a2a 0 25%,#333 0 50%) 0 0/16px 16px}
+</style></head><body>
+<header><div class="top"><h1>🧙 Hero & Skin</h1><a href="/">Semua aset</a></div><div class="sets" id="sets"></div></header>
+<div id="stage"><div id="msg">Memuat…</div><div id="info"></div></div>
+<div id="panel">
+ <div class="tools" id="animBar" style="display:none"><select id="clipSel"></select><button id="bPlay" class="on">Jeda</button><select id="spdSel"><option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="2">2x</option></select></div>
+ <div class="tools"><button id="bTex" class="on">Tekstur</button><button id="bWire">Wire</button><button id="bRot" class="on">Putar otomatis</button><button id="bAlpha" class="on">Transparan</button><button id="bBg">Latar</button><button id="bGal">Galeri tekstur</button></div>
+ <div class="lbl">Bagian model (ketuk untuk tampil/sembunyi)</div><div class="chips" id="chips"></div>
+</div>
+<div id="tx"><div class="bar"><span id="txt"></span><button id="txc">Tutup</button></div><div class="body" id="txb"></div></div>
+<script type="module">
+import * as THREE from 'three';import {OrbitControls} from '/l/OrbitControls.js';import {OBJLoader} from '/l/OBJLoader.js';import {GLTFLoader} from '/l/GLTFLoader.js';
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const enc=p=>p.split('/').map(encodeURIComponent).join('/');
+const kb=b=>b>1e6?(b/1e6).toFixed(1)+' MB':Math.round(b/1e3)+' KB';
+const H=await (await fetch('/hero.json')).json();
+let IDX=null;fetch('/index.json').then(r=>r.json()).then(j=>IDX=j);
+const stage=$('#stage'),R=new THREE.WebGLRenderer({antialias:true,alpha:true});R.setPixelRatio(Math.min(2,devicePixelRatio));R.outputColorSpace=THREE.SRGBColorSpace;stage.appendChild(R.domElement);
+const scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(40,1,.01,5000);
+scene.add(new THREE.HemisphereLight(0xffffff,0x6a6a80,1.6));const dl=new THREE.DirectionalLight(0xffffff,1.6);dl.position.set(3,5,4);scene.add(dl);const dl2=new THREE.DirectionalLight(0xaabbff,.7);dl2.position.set(-4,2,-3);scene.add(dl2);
+const oc=new OrbitControls(cam,R.domElement);oc.enableDamping=true;oc.autoRotate=true;oc.autoRotateSpeed=2.2;
+function fit(){const w=stage.clientWidth,h=stage.clientHeight;R.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();}
+new ResizeObserver(fit).observe(stage);fit();
+const st={texOn:true,wire:false,alpha:true,bg:0};const BGS=['radial-gradient(circle at 50% 35%,#2b2840,#141414 75%)','#d8d8dc','#000','#2f6f4f'];
+const texLoader=new THREE.TextureLoader(),texCache={},objCache={};
+const getTex=p=>texCache[p]||(texCache[p]=new Promise((ok,no)=>texLoader.load('/'+enc(p),t=>{t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;ok(t);},undefined,no)));
+let cur=null,root=null,items=[];
+$('#sets').innerHTML=H.sets.map((s,i)=>`<button data-i="${i}">${esc(s.name)}<small>${esc(s.sub)}</small></button>`).join('');
+$('#sets').onclick=e=>{const b=e.target.closest('button');if(b)load(+b.dataset.i);};
+function mats(it){const p=it.p;it.mats.forEach(m=>{m.map=st.texOn?it.tex:null;m.color.set(st.texOn&&it.tex?0xffffff:0xb9a7ff);m.wireframe=st.wire;m.transparent=p.a&&st.alpha;m.alphaTest=p.a&&st.alpha?.3:0;m.depthWrite=!(p.a&&st.alpha&&false);m.needsUpdate=true;});}
+
+function frame(sz){const t=Math.tan(cam.fov*Math.PI/360),dist=Math.max(sz.y/2/t,sz.x/2/(t*cam.aspect))*1.2+sz.z/2;cam.position.copy(new THREE.Vector3(.35,.08,1).normalize().multiplyScalar(dist));}
+let mixer=null,playing=true,clock=new THREE.Clock(),curAct=null,gClips=[];
+const gltfLoader=new GLTFLoader(),gtexCache={};
+const getTexG=p=>gtexCache[p]||(gtexCache[p]=new Promise((ok,no)=>texLoader.load('/'+enc(p),t=>{t.flipY=false;t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;ok(t);},undefined,no)));
+function playClip(n){if(!mixer)return;const c=gClips.find(x=>x.name===n);if(!c)return;const a=mixer.clipAction(c);if(curAct&&curAct!==a)curAct.fadeOut(.25);a.reset().fadeIn(.25).play();a.paused=!playing;curAct=a;}
+async function loadGlb(s,i){
+ const gl=await gltfLoader.loadAsync('/'+enc(s.glb),e=>{if(e.total)$('#msg').textContent='Memuat model animasi… '+Math.round(e.loaded/e.total*100)+'%';});
+ if(cur!==i)return;const sc=gl.scene;const meshes=[];sc.traverse(o=>{if(o.isMesh)meshes.push(o);});
+ const res=await Promise.all(s.parts.map(async p=>{const o=meshes.find(m=>(m.userData.mesh||m.name||'').endsWith(p.n));if(!o)return {p,o:null,mats:[]};
+  const tex=p.t?await getTexG(p.t).catch(()=>null):null;const m=new THREE.MeshStandardMaterial({roughness:.75,metalness:.05,side:THREE.DoubleSide});o.material=m;o.frustumCulled=false;o.visible=p.on;return {p,o,tex,mats:[m]};}));
+ meshes.forEach(m=>{if(!res.some(r=>r.o===m))m.visible=false;});
+ items=res;root=new THREE.Group();root.add(sc);scene.add(root);
+ mixer=new THREE.AnimationMixer(sc);gClips=gl.animations||[];
+ $('#animBar').style.display=gClips.length?'flex':'none';$('#clipSel').innerHTML=gClips.map(c=>`<option value="${esc(c.name)}">${esc(c.name)} (${c.duration.toFixed(1)}s)</option>`).join('');
+ const first=gClips.find(c=>c.name==='city_idle')||gClips[0];if(first){$('#clipSel').value=first.name;playClip(first.name);mixer.update(0);}
+ sc.updateMatrixWorld(true);meshes.forEach(m=>{if(m.isSkinnedMesh)m.skeleton.update();});const b=new THREE.Box3();items.forEach(it=>{if(it.o&&it.p.on)b.expandByObject(it.o,true);});
+ if(b.isEmpty())b.setFromObject(sc);const ct=b.getCenter(new THREE.Vector3()),sz=b.getSize(new THREE.Vector3());sc.position.sub(ct);
+ const d=Math.max(sz.x,sz.y,sz.z)||1;frame(sz);cam.near=d/300;cam.far=d*60;cam.updateProjectionMatrix();oc.target.set(0,0,0);oc.update();
+ items.forEach(mats);$('#msg').style.display='none';
+ $('#chips').innerHTML=items.map((it,k)=>`<button class="chip ${it.p.on?'on':''}" data-k="${k}">${esc(it.p.n)}<small>${kb(it.p.s)}${it.p.t?'':' · tanpa tekstur'}${it.o?'':' · tidak ada'}</small></button>`).join('');
+ $('#info').textContent=s.name+' · animasi aktif · tarik untuk memutar, cubit untuk zoom';}
+$('#clipSel').onchange=e=>playClip(e.target.value);
+$('#bPlay').onclick=()=>{playing=!playing;$('#bPlay').textContent=playing?'Jeda':'Putar';$('#bPlay').classList.toggle('on',playing);if(curAct)curAct.paused=!playing;};
+$('#spdSel').onchange=e=>{if(mixer)mixer.timeScale=+e.target.value;};
+async function load(i){
+ const s=H.sets[i];cur=i;document.querySelectorAll('#sets button').forEach((b,j)=>b.classList.toggle('on',j===i));
+ if(root){scene.remove(root);root=null;}if(mixer){mixer.stopAllAction();mixer=null;curAct=null;}$('#animBar').style.display='none';items=[];$('#chips').innerHTML='';$('#msg').style.display='flex';$('#msg').textContent='Memuat model… 0/'+s.parts.length;$('#info').textContent='';
+ if(s.glb){try{await loadGlb(s,i);}catch(e){$('#msg').textContent='Gagal memuat model animasi: '+e.message;}return;}
+ let done=0;const grp=new THREE.Group();
+ const res=await Promise.all(s.parts.map(async p=>{try{
+   const [txt,tex]=await Promise.all([objCache[p.m]||(objCache[p.m]=fetch('/'+enc(p.m)).then(r=>r.text())),p.t?getTex(p.t).catch(()=>null):null]);
+   const o=new OBJLoader().parse(txt),ms=[];
+   o.traverse(c=>{if(c.isMesh){const m=new THREE.MeshStandardMaterial({roughness:.75,metalness:.05,side:THREE.DoubleSide});c.material=m;ms.push(m);if(!c.geometry.attributes.normal)c.geometry.computeVertexNormals();}});
+   o.visible=p.on;grp.add(o);return {p,o,tex,mats:ms};
+  }catch(e){return {p,o:null,err:e.message,mats:[]};}finally{done++;$('#msg').textContent='Memuat model… '+done+'/'+s.parts.length;}}));
+ if(cur!==i)return;items=res;root=new THREE.Group();root.add(grp);
+ const b0=new THREE.Box3();items.forEach(it=>{if(it.o&&it.p.on)b0.expandByObject(it.o);});if(b0.isEmpty())items.forEach(it=>it.o&&b0.expandByObject(it.o));
+ const sz0=b0.getSize(new THREE.Vector3());if(sz0.z>sz0.y*1.25)grp.rotation.x=-Math.PI/2;
+ grp.updateMatrixWorld(true);const b=new THREE.Box3();items.forEach(it=>{if(it.o&&it.p.on)b.expandByObject(it.o);});if(b.isEmpty())items.forEach(it=>it.o&&b.expandByObject(it.o));
+ const ct=b.getCenter(new THREE.Vector3()),sz=b.getSize(new THREE.Vector3());grp.position.sub(ct);scene.add(root);
+ const d=Math.max(sz.x,sz.y,sz.z)||1;frame(sz);cam.near=d/300;cam.far=d*60;cam.updateProjectionMatrix();oc.target.set(0,0,0);oc.update();
+ items.forEach(mats);$('#msg').style.display='none';
+ $('#chips').innerHTML=items.map((it,k)=>`<button class="chip ${it.p.on?'on':''}" data-k="${k}">${esc(it.p.n)}<small>${kb(it.p.s)}${it.p.t?'':' · tanpa tekstur'}</small></button>`).join('');
+ $('#info').textContent=s.name+' · tarik untuk memutar, cubit untuk zoom';}
+$('#chips').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;const it=items[+c.dataset.k];if(!it||!it.o)return;it.o.visible=!it.o.visible;c.classList.toggle('on',it.o.visible);};
+const tg=(id,k,fn)=>{$(id).onclick=()=>{st[k]=!st[k];$(id).classList.toggle('on',st[k]);fn&&fn();items.forEach(mats);};};
+tg('#bTex','texOn');tg('#bWire','wire');tg('#bAlpha','alpha');
+$('#bRot').onclick=()=>{oc.autoRotate=!oc.autoRotate;$('#bRot').classList.toggle('on',oc.autoRotate);};
+$('#bBg').onclick=()=>{st.bg=(st.bg+1)%BGS.length;stage.style.background=BGS[st.bg];};
+$('#txc').onclick=()=>$('#tx').classList.remove('on');
+$('#bGal').onclick=()=>{const s=H.sets[cur];if(!IDX){return;}const L=IDX.tex.filter(x=>x.b===s.bundle);$('#txt').textContent=s.name+' — '+L.length+' tekstur';
+ $('#txb').innerHTML='<div class="grid">'+L.map((x,i)=>`<div data-p="${esc(x.p)}"><img loading="lazy" src="/${enc(x.t)}"><small>${esc(x.n)}<br>${x.w}×${x.h}</small></div>`).join('')+'</div>';$('#tx').classList.add('on');};
+$('#txb').onclick=e=>{const d=e.target.closest('[data-p]');if(d){$('#txb').innerHTML=`<img id="big" src="/${enc(d.dataset.p)}">`;}};
+(function loop(){requestAnimationFrame(loop);if(mixer)mixer.update(clock.getDelta());oc.update();R.render(scene,cam);})();
+load(0);
+</script></body></html>

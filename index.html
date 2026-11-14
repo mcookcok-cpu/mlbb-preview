@@ -1,0 +1,60 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#141414"><title>Preview Selena Aspirant</title>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}body{margin:0;background:#141414;color:#ddd;font:14px/1.4 system-ui,sans-serif}
+header{position:sticky;top:0;background:#141414;z-index:5;padding:8px 10px;border-bottom:1px solid #333}
+h1{font-size:16px;margin:0 0 6px}nav{display:flex;gap:6px}nav button{flex:1;background:#222;color:#aaa;border:1px solid #333;border-radius:9px;padding:8px 2px;font-size:13px}nav button.on{background:#7c5cdb;color:#fff;border-color:#7c5cdb}
+input{width:100%;margin-top:6px;background:#222;color:#ddd;border:1px solid #333;border-radius:9px;padding:8px 10px;font:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px;padding:8px}
+.c{background:#1e1e1e;border:1px solid #2c2c2c;border-radius:8px;overflow:hidden}.c img{width:100%;aspect-ratio:1;object-fit:contain;background:#2a2a2a;display:block}
+.c small{display:block;padding:3px 5px;font-size:10.5px;color:#999;word-break:break-all;max-height:3.4em;overflow:hidden}
+.row{padding:9px 12px;border-bottom:1px solid #262626}.row b{display:block;font-weight:500;word-break:break-all}.row small{color:#888}.row audio{width:100%;margin-top:6px}
+.sec{padding:10px 12px 2px;color:#a88bfa;font-weight:600}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.94);display:none;z-index:20;flex-direction:column}#modal.on{display:flex}
+#modal .bar{padding:10px 12px;display:flex;gap:10px;align-items:center}#modal .bar span{flex:1;font-size:12px;word-break:break-all}#modal button{background:#333;color:#fff;border:0;border-radius:8px;padding:8px 14px}
+#modal .body{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:auto}#modal img{max-width:100%;max-height:100%;object-fit:contain;background:repeating-conic-gradient(#2a2a2a 0 25%,#333 0 50%) 0 0/16px 16px}
+#v3{flex:1;min-height:0;width:100%;touch-action:none}.cnt{padding:6px 12px;color:#888;font-size:12px}
+</style></head><body>
+<header><h1>🎮 Selena Aspirant — preview aset <a href="/hero" style="font-size:12px;color:#a88bfa;margin-left:8px;border:1px solid #333;border-radius:8px;padding:3px 8px;text-decoration:none">Hero &amp; Skin 3D</a></h1><nav><button data-t="tex" class="on">Tekstur</button><button data-t="mesh">Model 3D</button><button data-t="aud">Suara</button><button data-t="anim">Animasi</button></nav><input id="q" placeholder="Cari nama…" autocomplete="off"><select id="lang" style="display:none;width:100%;margin-top:6px;background:#222;color:#ddd;border:1px solid #333;border-radius:9px;padding:8px 10px;font:inherit"></select></header>
+<div id="list"></div>
+<div id="modal"><div class="bar"><span id="mt"></span><button id="wf" style="display:none">Wire</button><button id="mc">Tutup</button></div><div class="body" id="mb"></div></div>
+<script type="module">
+import * as THREE from 'three';import {OrbitControls} from 'three/addons/controls/OrbitControls.js';import {OBJLoader} from 'three/addons/loaders/OBJLoader.js';
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const D=await (await fetch('/index.json')).json();let tab='tex',lim=240,lang='id';
+const LN={id:'Indonesia',ja:'Jepang','en-ph':'Inggris (Filipina)',ar:'Arab',es:'Spanyol',pt:'Portugis',ru:'Rusia',tr:'Turki',base:'Bawaan',efek:'Efek suara (tanpa bahasa)'};
+const langOf=b=>{const m=b.match(/_m_([a-z\-]+)\./);if(m)return m[1];return /^(vo|show_vo)_/.test(b)?'base':'efek';};
+D.aud.forEach(x=>x.l=langOf(x.b));
+const cnt={};D.aud.forEach(x=>cnt[x.l]=(cnt[x.l]||0)+1);
+$('#lang').innerHTML=Object.keys(LN).filter(k=>cnt[k]).map(k=>`<option value="${k}">${LN[k]} (${cnt[k]})</option>`).join('');$('#lang').value=lang;
+$('#lang').onchange=e=>{lang=e.target.value;lim=240;draw();};
+const enc=p=>p.split('/').map(encodeURIComponent).join('/');
+const kb=b=>b>1e6?(b/1e6).toFixed(1)+' MB':Math.round(b/1e3)+' KB';
+function draw(){const q=$('#q').value.trim().toLowerCase(),f=a=>a.filter(x=>!q||(x.n+' '+x.b).toLowerCase().includes(q)),L=$('#list');let h='',arr=f(tab==='aud'?D.aud.filter(x=>x.l===lang):D[tab]);$('#lang').style.display=tab==='aud'?'block':'none';
+ const more=arr.length>lim;const shown=arr.slice(0,lim);
+ if(tab==='tex')h='<div class="grid">'+shown.map((x,i)=>`<div class="c" data-i="${D.tex.indexOf(x)}"><img loading="lazy" src="/${enc(x.t)}"><small>${esc(x.n)}<br>${x.w}×${x.h}</small></div>`).join('')+'</div>';
+ else if(tab==='mesh')h=shown.map(x=>`<div class="row" data-m="${D.mesh.indexOf(x)}"><b>${esc(x.n)}</b><small>${esc(x.b)} · ${kb(x.s)}</small></div>`).join('');
+ else if(tab==='aud'){let last='';for(const x of shown){if(x.b!==last){h+=`<div class="sec">${esc(x.b.replace(/\.2021$/,''))}</div>`;last=x.b;}h+=`<div class="row"><b>${esc(x.n)}</b><small>${kb(x.s)}</small><audio controls preload="none" src="/${enc(x.p)}"></audio></div>`;}}
+ else h=shown.map(x=>`<div class="row"><b>${esc(x.n)}</b><small>${esc(x.b)}</small></div>`).join('');
+ L.innerHTML=`<div class="cnt">${arr.length} item${more?' (menampilkan '+lim+')':''}</div>`+h+(more?'<div class="row" id="more" style="text-align:center;color:#a88bfa">Tampilkan lebih banyak</div>':'');
+ const m=$('#more');if(m)m.onclick=()=>{lim+=300;draw();};}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;lim=240;document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));draw();scrollTo(0,0);});
+$('#q').oninput=()=>{lim=240;draw();};
+let R=null;function close3d(){if(R){cancelAnimationFrame(R.raf);R.r.dispose();R=null;}}
+function closeM(){close3d();$('#modal').classList.remove('on');$('#mb').innerHTML='';$('#wf').style.display='none';}$('#mc').onclick=closeM;
+$('#list').onclick=e=>{const c=e.target.closest('.c'),r=e.target.closest('[data-m]');
+ if(c){const x=D.tex[+c.dataset.i];$('#mt').textContent=x.b+' / '+x.n+' ('+x.w+'×'+x.h+')';$('#mb').innerHTML=`<img src="/${enc(x.p)}">`;$('#modal').classList.add('on');}
+ else if(r){view3d(D.mesh[+r.dataset.m]);}};
+async function view3d(x){$('#mt').textContent=x.n+' · tarik untuk memutar, cubit untuk zoom';$('#mb').innerHTML='<div id="v3"></div>';$('#modal').classList.add('on');$('#wf').style.display='';
+ const el=$('#v3'),w=el.clientWidth||innerWidth,h=el.clientHeight||innerHeight-60;const r=new THREE.WebGLRenderer({antialias:true});r.setSize(w,h);r.setPixelRatio(Math.min(2,devicePixelRatio));el.appendChild(r.domElement);
+ const s=new THREE.Scene();s.background=new THREE.Color(0x1c1c1c);const cam=new THREE.PerspectiveCamera(45,w/h,.01,5000);s.add(new THREE.HemisphereLight(0xffffff,0x444455,1.1));const dl=new THREE.DirectionalLight(0xffffff,1.2);dl.position.set(3,5,4);s.add(dl);
+ const oc=new OrbitControls(cam,r.domElement);oc.enableDamping=true;
+ try{const txt=await (await fetch('/'+enc(x.p))).text();const o=new OBJLoader().parse(txt);const mat=new THREE.MeshStandardMaterial({color:0xb9a7ff,roughness:.6,metalness:.1,side:THREE.DoubleSide});
+  o.traverse(c=>{if(c.isMesh){c.material=mat;if(!c.geometry.attributes.normal)c.geometry.computeVertexNormals();}});
+  const box=new THREE.Box3().setFromObject(o),sz=box.getSize(new THREE.Vector3()),ct=box.getCenter(new THREE.Vector3());o.position.sub(ct);s.add(o);const d=Math.max(sz.x,sz.y,sz.z)||1;cam.position.set(d*1.2,d*.8,d*1.6);cam.near=d/500;cam.far=d*50;cam.updateProjectionMatrix();oc.update();
+  $('#wf').onclick=()=>{mat.wireframe=!mat.wireframe;};
+ }catch(e){el.innerHTML='<div class="row">Gagal memuat model: '+esc(e.message)+'</div>';}
+ const st={r,raf:0};R=st;(function loop(){st.raf=requestAnimationFrame(loop);oc.update();r.render(s,cam);})();}
+draw();
+</script></body></html>
